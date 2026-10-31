@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Routing math lives in src/lib/routing.ts (pure, unit-tested); UI only renders its results — keeps the algorithm testable.
