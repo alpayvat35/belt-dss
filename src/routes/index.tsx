@@ -57,7 +57,11 @@ function Dashboard() {
   const prev = useRef(best.id);
   const [flash, setFlash] = useState(false);
   useEffect(() => {
-    if (prev.current !== best.id) { setFlash(true); const t = setTimeout(() => setFlash(false), 900); prev.current = best.id; return () => clearTimeout(t); }
+    if (prev.current === best.id) return;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 900);
+    prev.current = best.id;
+    return () => clearTimeout(t);
   }, [best.id]);
 
   const radar = [
@@ -107,7 +111,7 @@ function Dashboard() {
                 </Select>
               </Field>
               <Field label={`Cargo Weight — ${weightT} t`}>
-                <Slider min={1} max={100} step={1} value={[weightT]} onValueChange={([v]) => setWeight(v)} />
+                <Slider min={1} max={100} step={1} value={[weightT]} onValueChange={([v]) => setWeight(v ?? 1)} />
                 <div className="mt-1 flex justify-between font-mono text-[10px] text-muted-foreground"><span>1 t</span><span>100 t</span></div>
               </Field>
               <Field label="Urgency Level">

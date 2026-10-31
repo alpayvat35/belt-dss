@@ -5,8 +5,8 @@ const base = { origin: "Shanghai", destination: "Istanbul", weightT: 20, urgency
 
 describe("routing", () => {
   it("disruption raises ocean leg time by 40% and cost by 20%", () => {
-    const a = computeRoutes(base)[0].legs[0];
-    const b = computeRoutes({ ...base, disruption: true })[0].legs[0];
+    const a = computeRoutes(base)[0]!.legs[0]!;
+    const b = computeRoutes({ ...base, disruption: true })[0]!.legs[0]!;
     expect(b.days / a.days).toBeCloseTo(1.4);
     expect(b.cost / a.cost).toBeCloseTo(1.2);
   });
