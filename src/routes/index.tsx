@@ -57,7 +57,11 @@ function Dashboard() {
   const prev = useRef(best.id);
   const [flash, setFlash] = useState(false);
   useEffect(() => {
-    if (prev.current !== best.id) { setFlash(true); const t = setTimeout(() => setFlash(false), 900); prev.current = best.id; return () => clearTimeout(t); }
+    if (prev.current === best.id) return;
+    setFlash(true);
+    const t = setTimeout(() => setFlash(false), 900);
+    prev.current = best.id;
+    return () => clearTimeout(t);
   }, [best.id]);
 
   const radar = [
@@ -71,7 +75,7 @@ function Dashboard() {
       <header className="border-b border-border bg-background/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-6 py-4">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">IE · Network Optimization</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-primary">IE · Belt &amp; Road Corridor — China → Türkiye</p>
             <h1 className="text-xl font-bold md:text-2xl">Global Supply Chain & Eco-Routing</h1>
           </div>
           <div className="flex items-center gap-2 font-mono text-xs">
@@ -80,6 +84,15 @@ function Dashboard() {
           </div>
         </div>
       </header>
+
+      {disruption && (
+        <div className="border-b border-destructive/60 bg-destructive/15">
+          <p className="mx-auto flex max-w-7xl items-center gap-2 px-6 py-2 font-mono text-xs font-semibold text-destructive">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
+            Alert: Suez Canal blocked. Rerouting algorithms engaged.
+          </p>
+        </div>
+      )}
 
       <main className="mx-auto grid max-w-7xl gap-5 px-6 py-6 lg:grid-cols-[320px_1fr]">
         <div className="space-y-5">
@@ -98,7 +111,7 @@ function Dashboard() {
                 </Select>
               </Field>
               <Field label={`Cargo Weight — ${weightT} t`}>
-                <Slider min={1} max={100} step={1} value={[weightT]} onValueChange={([v]) => setWeight(v)} />
+                <Slider min={1} max={100} step={1} value={[weightT]} onValueChange={([v]) => setWeight(v ?? 1)} />
                 <div className="mt-1 flex justify-between font-mono text-[10px] text-muted-foreground"><span>1 t</span><span>100 t</span></div>
               </Field>
               <Field label="Urgency Level">
@@ -118,10 +131,10 @@ function Dashboard() {
 
           <Panel title="Disruption Simulator" className={cn(disruption && "border-destructive/60")}>
             <label className="flex cursor-pointer items-start justify-between gap-3">
-              <span className="text-sm">Simulate Supply Chain Disruption <span className="text-muted-foreground">(e.g., Canal Blockage)</span></span>
+              <span className="text-sm">Simulate Suez Canal Blockage <span className="text-muted-foreground">(ocean freight via Suez)</span></span>
               <Switch checked={disruption} onCheckedChange={setDisruption} />
             </label>
-            <p className="mt-3 font-mono text-[11px] text-muted-foreground">Ocean legs: lead time +40%, cost +20%</p>
+            <p className="mt-3 font-mono text-[11px] text-muted-foreground">Ocean legs only: lead time +40%, cost +20%</p>
           </Panel>
         </div>
 
@@ -147,7 +160,8 @@ function Dashboard() {
               </div>
             </div>
             <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] text-muted-foreground">
-              Score = freight cost + lead time × ${URGENCY[urgency].delayPerTonDay}/t/day delay penalty + CO₂ × ${CARBON_PRICE}/kg shadow carbon price
+              Algorithm optimizes based on Total Cost + (Carbon Emissions × Carbon Tax) + (Lead Time × Urgency Penalty)
+              {" "}· carbon tax ${CARBON_PRICE}/kg · urgency penalty ${URGENCY[urgency].delayPerTonDay}/t/day
             </p>
           </section>
 
@@ -169,6 +183,7 @@ function Dashboard() {
                 <dl className="mt-3 space-y-1.5 font-mono text-sm">
                   <Row k="Total Cost" v={usd(r.cost)} />
                   <Row k="CO₂ Emissions" v={`${num(r.co2)} kg`} />
+                  <Row k="Border Customs Delay" v={`${r.customsDays} days`} />
                   <Row k="Lead Time" v={`${r.days.toFixed(1)} days`} />
                   <Row k="Gen. Cost" v={usd(r.generalizedCost)} muted />
                 </dl>
