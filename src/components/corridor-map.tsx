@@ -14,7 +14,7 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
   const [engine, setEngine] = useState<{ L: typeof Leaflet; map: Leaflet.Map }>();
   const [failed, setFailed] = useState(false);
   const [tilesFailed, setTilesFailed] = useState(false);
-  const bounds = useRef<Leaflet.LatLngBounds>();
+  const bounds = useRef<Leaflet.LatLngBounds | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -22,10 +22,10 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
     let resize: ResizeObserver | undefined;
     import("leaflet").then((L) => {
       if (cancelled || !container.current) return;
-      instance = L.map(container.current, { zoomControl: false, scrollWheelZoom: false, minZoom: 2, maxZoom: 8, worldCopyJump: true });
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: "abcd", maxZoom: 19,
+      instance = L.map(container.current, { zoomControl: false, scrollWheelZoom: false, minZoom: 1, maxZoom: 8, worldCopyJump: true });
+      L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+        attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ',
+        maxZoom: 8,
       }).on("tileerror", () => { if (!cancelled) setTilesFailed(true); }).addTo(instance);
       const map = instance;
       resize = new ResizeObserver(() => { map.invalidateSize(); if (bounds.current) map.fitBounds(bounds.current, { padding: [35, 40], animate: false }); });
@@ -60,7 +60,7 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
     }
     for (const [city, point, kind] of [[origin, start, "origin"], [destination, end, "destination"]] as const) {
       L.marker(point, { icon: L.divIcon({ className: `corridor-city corridor-city-${kind}`, html: '<span class="corridor-city-dot"></span>', iconSize: [18, 18], iconAnchor: [9, 9] }), title: city })
-        .bindTooltip(`${city} · ${kind === "origin" ? "CN" : "TR"}`, { permanent: true, direction: kind === "origin" ? "right" : "left", className: "corridor-city-label", offset: [kind === "origin" ? 8 : -8, 0] }).addTo(layer);
+        .bindTooltip(`${city} · ${kind === "origin" ? "CN" : "TR"}`, { permanent: true, direction: "top", className: "corridor-city-label", offset: [0, -10] }).addTo(layer);
     }
     if (disruption) {
       L.marker(suez, { icon: L.divIcon({ className: "corridor-suez", html: '<span class="corridor-warning-ring"></span><span class="corridor-warning-dot">!</span>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: "Suez Canal blocked" })
