@@ -31,17 +31,17 @@ const DEST: Record<Destination, { sea: number; truck: number; air: number; rail:
 };
 
 interface Leg { mode: Mode; km: number }
-interface Template { id: string; name: string; legs: Leg[]; handlingDays: number; fixed: number }
+interface Template { id: string; name: string; legs: Leg[]; handlingDays: number; customsDays: number; fixed: number }
 
 function templates(o: Origin, d: Destination): Template[] {
   const off = ORIGIN_OFFSET[o];
   const t = DEST[d];
   return [
-    { id: "ocean-truck", name: "Ocean + Truck", handlingDays: 4, fixed: 1500,
+    { id: "ocean-truck", name: "Ocean + Truck", handlingDays: 4, customsDays: 5, fixed: 1500,
       legs: [{ mode: "ocean", km: t.sea - off * 0.6 }, { mode: "truck", km: t.truck + 240 }] },
-    { id: "air", name: "Direct Air", handlingDays: 2, fixed: 900,
+    { id: "air", name: "Direct Air", handlingDays: 2, customsDays: 1, fixed: 900,
       legs: [{ mode: "air", km: t.air + off * 0.3 }, { mode: "truck", km: 50 }] },
-    { id: "rail-ocean", name: "Rail + Ocean", handlingDays: 5, fixed: 1800,
+    { id: "rail-ocean", name: "Rail + Ocean", handlingDays: 5, customsDays: 3, fixed: 1800,
       legs: [{ mode: "rail", km: t.rail + off * 0.8 }, { mode: "ocean", km: 1000 }, { mode: "truck", km: t.truck }] },
   ];
 }
@@ -49,7 +49,7 @@ function templates(o: Origin, d: Destination): Template[] {
 export interface RouteResult {
   id: string; name: string;
   legs: (Leg & { days: number; cost: number; co2: number; disrupted: boolean })[];
-  cost: number; co2: number; days: number;
+  cost: number; co2: number; days: number; customsDays: number;
   generalizedCost: number;
   scores: { cost: number; speed: number; eco: number };
 }
@@ -67,11 +67,11 @@ export function computeRoutes(inp: Inputs): RouteResult[] {
       return { ...l, days, cost, co2, disrupted };
     });
     const cost = tpl.fixed + legs.reduce((s, l) => s + l.cost, 0);
-    const days = tpl.handlingDays + legs.reduce((s, l) => s + l.days, 0);
+    const days = tpl.handlingDays + tpl.customsDays + legs.reduce((s, l) => s + l.days, 0);
     const co2 = legs.reduce((s, l) => s + l.co2, 0);
     const generalizedCost =
       cost + days * URGENCY[inp.urgency].delayPerTonDay * inp.weightT + co2 * CARBON_PRICE;
-    return { id: tpl.id, name: tpl.name, legs, cost, days, co2, generalizedCost };
+    return { id: tpl.id, name: tpl.name, legs, cost, days, customsDays: tpl.customsDays, co2, generalizedCost };
   });
   const minC = Math.min(...raw.map((r) => r.cost));
   const minD = Math.min(...raw.map((r) => r.days));
