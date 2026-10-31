@@ -4,6 +4,6 @@
 - [x] Verify routing interactions, chart rendering, and responsive layout.
 
 # Interactive corridor map
-- [ ] Add dark interactive map, city markers, and animated route lines.
-- [ ] Reflect Suez disruption and alternative Eurasian rail corridor.
-- [ ] Verify selected cities, disruption, map controls, and mobile fit.
+- [x] Add dark interactive map, city markers, and animated route lines.
+- [x] Reflect Suez disruption and alternative Eurasian rail corridor.
+- [x] Verify selected cities, disruption, map controls, and mobile fit.
