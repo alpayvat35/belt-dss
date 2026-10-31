@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -179,6 +180,22 @@
 }
 .recommendation-flash { box-shadow: var(--glow), var(--panel-shadow); }
 .status-pulse { animation: status-pulse 2.5s ease-out infinite; }
+.corridor-map { background: var(--background); font-family: var(--font-sans); }
+.corridor-map .leaflet-control-attribution { background: var(--card); color: var(--muted-foreground); font-size: 9px; }
+.corridor-map .leaflet-control-attribution a { color: var(--accent); }
+.corridor-map .leaflet-tooltip { background: var(--popover); border: 1px solid var(--border); color: var(--foreground); box-shadow: var(--panel-shadow); font-size: 11px; }
+.corridor-map .leaflet-tooltip::before { display: none; }
+.corridor-line { fill: none; stroke-dasharray: 9 7; animation: corridor-flow 2s linear infinite; }
+.corridor-ocean, .corridor-air { stroke: var(--accent); }
+.corridor-ocean-blocked { stroke: var(--destructive); }
+.corridor-rail { stroke: var(--primary); stroke-dasharray: 6 8; }
+.corridor-truck { stroke: var(--warning); stroke-dasharray: 3 5; }
+.corridor-city-dot { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 4px solid var(--card); box-shadow: 0 0 0 1px var(--accent); }
+.corridor-city-destination .corridor-city-dot { background: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.corridor-warning-ring { position: absolute; inset: 0; border: 2px solid var(--destructive); border-radius: 50%; animation: status-pulse 2s ease-out infinite; }
+.corridor-warning-dot { position: absolute; inset: 2px; display: grid; place-items: center; border-radius: 50%; background: var(--destructive); color: var(--destructive-foreground); font-weight: bold; }
+.corridor-map .corridor-warning-label { color: var(--destructive); border-color: var(--destructive); }
+@keyframes corridor-flow { to { stroke-dashoffset: -32; } }
 @keyframes status-pulse { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.3); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

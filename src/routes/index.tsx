@@ -12,6 +12,7 @@ import {
 } from "@/lib/routing";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { CorridorMap } from "@/components/corridor-map";
 import { Activity, ArrowDownRight, ArrowUpRight, ArrowRight, Check, Clock3, DollarSign, Leaf, Ship, Plane, TrainFront, Truck, AlertTriangle, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -110,6 +111,8 @@ function Dashboard() {
             <span className="text-[11px] text-muted-foreground">Ocean legs only: lead time +40% · cost +20%</span>
           </div>
         </Panel>
+
+        <CorridorMap origin={origin} destination={destination} disruption={disruption} routeId={best.id} routeName={best.name} />
 
         <div className="grid gap-4 md:grid-cols-3">
           <Stat label="Total estimated cost" value={usd(best.cost)} icon={DollarSign} tone="primary" trend={Math.abs(costChange) < 0.05 ? "Unchanged vs. nominal network" : `${Math.abs(costChange).toFixed(1)}% ${costChange > 0 ? "higher" : "lower"} vs. nominal`} adverse={costChange > 0} />
