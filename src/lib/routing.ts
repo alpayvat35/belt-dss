@@ -1,55 +1,46 @@
-export const ORIGINS = ["Shanghai", "Shenzhen", "Ningbo", "Qingdao"] as const;
-export const DESTINATIONS = ["Istanbul", "Izmir", "Mersin", "Ankara"] as const;
-export type Origin = (typeof ORIGINS)[number];
-export type Destination = (typeof DESTINATIONS)[number];
-export type Urgency = "low" | "medium" | "high" | "critical";
-export type Mode = "ocean" | "rail" | "truck" | "air";
+import {
+  MODES, URGENCY, SHADOW_CARBON_PRICE, ORIGIN_OFFSET_KM, DESTINATION_DISTANCES_KM,
+  DISTANCE_RULES, ROUTE_ASSUMPTIONS, DISRUPTION_ASSUMPTION,
+  type Origin, type Destination, type Urgency, type Mode, type RouteId,
+} from "./model-assumptions";
+export { ORIGINS, DESTINATIONS, MODES, URGENCY, SHADOW_CARBON_PRICE, type Origin, type Destination, type Urgency, type Mode } from "./model-assumptions";
+/** Backward-compatible alias; this parameter is a shadow price, not a tax. */
+export const CARBON_PRICE = SHADOW_CARBON_PRICE;
 
-export const URGENCY: Record<Urgency, { label: string; delayPerTonDay: number; note: string }> = {
-  low: { label: "Low", delayPerTonDay: 15, note: "Cost & carbon first" },
-  medium: { label: "Medium", delayPerTonDay: 60, note: "Balanced trade-off" },
-  high: { label: "High", delayPerTonDay: 250, note: "Lead time weighted" },
-  critical: { label: "Critical", delayPerTonDay: 1000, note: "Line-down risk" },
-};
+interface Leg {
+  mode: Mode;
+  km: number;
+  /** Unspecified in Phase 1; future network data may identify individual Suez edges. */
+  suezDependency: "unspecified" | "dependent" | "independent";
+}
+interface Template { id: RouteId; name: string; legs: Leg[]; handlingDays: number; customsDays: number; fixed: number }
+const leg = (mode: Mode, km: number): Leg => ({ mode, km, suezDependency: "unspecified" });
 
-// Per tonne-km parameters (indicative industry averages)
-export const MODES: Record<Mode, { cost: number; co2g: number; kmPerDay: number; label: string }> = {
-  ocean: { cost: 0.02, co2g: 10, kmPerDay: 650, label: "Ocean" },
-  rail: { cost: 0.06, co2g: 22, kmPerDay: 900, label: "Rail" },
-  truck: { cost: 0.12, co2g: 90, kmPerDay: 700, label: "Truck" },
-  air: { cost: 1.1, co2g: 600, kmPerDay: 9000, label: "Air" },
-};
-
-export const CARBON_PRICE = 0.1; // $ per kg CO2 (shadow price, $100/t)
-
-const ORIGIN_OFFSET: Record<Origin, number> = { Shanghai: 0, Shenzhen: 900, Ningbo: 150, Qingdao: 700 };
-const DEST: Record<Destination, { sea: number; truck: number; air: number; rail: number }> = {
-  Istanbul: { sea: 16000, truck: 60, air: 8000, rail: 10500 },
-  Izmir: { sea: 15600, truck: 80, air: 8400, rail: 11000 },
-  Mersin: { sea: 14900, truck: 70, air: 7600, rail: 10800 },
-  Ankara: { sea: 16000, truck: 450, air: 7300, rail: 10200 },
-};
-
-interface Leg { mode: Mode; km: number }
-interface Template { id: string; name: string; legs: Leg[]; handlingDays: number; customsDays: number; fixed: number }
+/** Phase 1 scope deliberately ignores Suez dependency; preserves legacy behavior. */
+function isDisrupted(l: Leg, enabled: boolean): boolean {
+  return enabled && DISRUPTION_ASSUMPTION.scope === "all-ocean-legs" && l.mode === "ocean";
+}
 
 function templates(o: Origin, d: Destination): Template[] {
-  const off = ORIGIN_OFFSET[o];
-  const t = DEST[d];
+  const off = ORIGIN_OFFSET_KM[o];
+  const t = DESTINATION_DISTANCES_KM[d];
+  const rule = DISTANCE_RULES;
   return [
-    { id: "ocean-truck", name: "Ocean + Truck", handlingDays: 4, customsDays: 5, fixed: 1500,
-      legs: [{ mode: "ocean", km: t.sea - off * 0.6 }, { mode: "truck", km: t.truck + 240 }] },
-    { id: "air", name: "Direct Air", handlingDays: 2, customsDays: 1, fixed: 900,
-      legs: [{ mode: "air", km: t.air + off * 0.3 }, { mode: "truck", km: 50 }] },
-    { id: "rail-ocean", name: "Rail + Ocean", handlingDays: 5, customsDays: 3, fixed: 1800,
-      legs: [{ mode: "rail", km: t.rail + off * 0.8 }, { mode: "ocean", km: 1000 }, { mode: "truck", km: t.truck }] },
+    { id: "ocean-truck", ...ROUTE_ASSUMPTIONS["ocean-truck"],
+      legs: [leg("ocean", t.sea - off * rule.oceanOffsetMultiplier), leg("truck", t.truck + rule.oceanTruckAdditionalKm)] },
+    { id: "air", ...ROUTE_ASSUMPTIONS.air,
+      legs: [leg("air", t.air + off * rule.airOffsetMultiplier), leg("truck", rule.airTruckKm)] },
+    { id: "rail-ocean", ...ROUTE_ASSUMPTIONS["rail-ocean"],
+      legs: [leg("rail", t.rail + off * rule.railOffsetMultiplier), leg("ocean", rule.railOceanKm), leg("truck", t.truck)] },
   ];
 }
 
 export interface RouteResult {
-  id: string; name: string;
+  id: RouteId; name: string;
   legs: (Leg & { days: number; cost: number; co2: number; disrupted: boolean })[];
-  cost: number; co2: number; days: number; customsDays: number;
+  /** cost: USD; co2: kg CO₂; days/customsDays/handlingDays: days. */
+  cost: number; co2: number; days: number; customsDays: number; handlingDays: number;
+  fixedCost: number; variableCost: number; carbonCost: number; timePenalty: number;
   generalizedCost: number;
   scores: { cost: number; speed: number; eco: number };
 }
@@ -60,18 +51,22 @@ export function computeRoutes(inp: Inputs): RouteResult[] {
   const raw = templates(inp.origin, inp.destination).map((tpl) => {
     const legs = tpl.legs.map((l) => {
       const m = MODES[l.mode];
-      const disrupted = inp.disruption && l.mode === "ocean";
-      const days = (l.km / m.kmPerDay) * (disrupted ? 1.4 : 1);
-      const cost = inp.weightT * l.km * m.cost * (disrupted ? 1.2 : 1);
+      const disrupted = isDisrupted(l, inp.disruption);
+      const days = (l.km / m.kmPerDay) * (disrupted ? DISRUPTION_ASSUMPTION.timeMultiplier : 1);
+      const cost = inp.weightT * l.km * m.cost * (disrupted ? DISRUPTION_ASSUMPTION.costMultiplier : 1);
       const co2 = (inp.weightT * l.km * m.co2g) / 1000;
       return { ...l, days, cost, co2, disrupted };
     });
-    const cost = tpl.fixed + legs.reduce((s, l) => s + l.cost, 0);
+    const variableCost = legs.reduce((s, l) => s + l.cost, 0);
+    const cost = tpl.fixed + variableCost;
     const days = tpl.handlingDays + tpl.customsDays + legs.reduce((s, l) => s + l.days, 0);
     const co2 = legs.reduce((s, l) => s + l.co2, 0);
-    const generalizedCost =
-      cost + days * URGENCY[inp.urgency].delayPerTonDay * inp.weightT + co2 * CARBON_PRICE;
-    return { id: tpl.id, name: tpl.name, legs, cost, days, customsDays: tpl.customsDays, co2, generalizedCost };
+    const timePenalty = days * URGENCY[inp.urgency].delayPerTonDay * inp.weightT;
+    const carbonCost = co2 * SHADOW_CARBON_PRICE;
+    // Addition order retained to preserve baseline floating-point results.
+    const generalizedCost = cost + timePenalty + carbonCost;
+    return { id: tpl.id, name: tpl.name, legs, cost, days, customsDays: tpl.customsDays,
+      handlingDays: tpl.handlingDays, fixedCost: tpl.fixed, variableCost, carbonCost, timePenalty, co2, generalizedCost };
   });
   const minC = Math.min(...raw.map((r) => r.cost));
   const minD = Math.min(...raw.map((r) => r.days));
@@ -89,4 +84,21 @@ export function computeRoutes(inp: Inputs): RouteResult[] {
 /** Pick the route with the lowest generalized cost (freight + urgency-weighted delay + carbon). */
 export function recommend(routes: RouteResult[]): RouteResult {
   return routes.reduce((best, r) => (r.generalizedCost < best.generalizedCost ? r : best));
+}
+
+/** Stable ranking matches recommend's first-in-template-order tie policy. */
+export function explainRecommendation(routes: RouteResult[]) {
+  const ranked = [...routes].sort((a, b) => a.generalizedCost - b.generalizedCost);
+  const winner = ranked[0];
+  const runnerUp = ranked[1];
+  if (!winner || !runnerUp) throw new Error("Recommendation comparison requires at least two routes.");
+  return {
+    winner, runnerUp, gap: runnerUp.generalizedCost - winner.generalizedCost,
+    contributions: {
+      freight: runnerUp.cost - winner.cost,
+      carbon: runnerUp.carbonCost - winner.carbonCost,
+      time: runnerUp.timePenalty - winner.timePenalty,
+    },
+    fasterDespiteHigherFreight: winner.cost > runnerUp.cost && winner.days < runnerUp.days,
+  };
 }

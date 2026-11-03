@@ -1,3 +1,10 @@
+# BELT-DSS Phase 1
+- [x] Centralize typed assumptions and preserve baseline mathematics.
+- [x] Add methodology, provenance, and dynamic recommendation explanation.
+- [x] Correct terminology and disclose disruption limitations.
+- [x] Document methodology and extend validation tests.
+- [x] Verify automated tests, preview checks, and desktop/mobile flows (397 tests pass; preview build OK; separate manual TypeScript/production commands prohibited by environment).
+
 # Dashboard visual refresh
 - [x] Refine branding, glass panels, KPI cards, and recommendation highlight.
 - [x] Add coordinated radar and bar comparisons with semantic chart colors.

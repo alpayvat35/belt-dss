@@ -47,10 +47,10 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
     const rail: Point[] = [start, [34.3, 108.9], [43.8, 87.6], [43.2, 76.9], [44, 65], [43.6, 51.2], [40.4, 49.9], [41.7, 44.8], [40.6, 43.1], end];
     const line = (points: Point[], cls: string, tooltip: string) => L.polyline(points, { className: `corridor-line ${cls}`, weight: 3, opacity: 0.95 }).bindTooltip(tooltip, { sticky: true }).addTo(layer);
     if (routeId === "ocean-truck" || disruption) {
-      line(ocean, disruption ? "corridor-ocean-blocked" : "corridor-ocean", disruption ? "Ocean corridor · Suez blockage" : "Ocean corridor · via Suez");
+      line(ocean, disruption ? "corridor-ocean-blocked" : "corridor-ocean", disruption ? "Illustrative ocean corridor · simulated Suez scenario" : "Illustrative ocean corridor · drawn via Suez");
       line([port, end], "corridor-truck", "Last-mile truck");
     }
-    if (routeId === "rail-ocean" || disruption) line(rail, "corridor-rail", disruption ? "Alternative Eurasian rail corridor" : "Eurasian rail corridor");
+    if (routeId === "rail-ocean" || disruption) line(rail, "corridor-rail", "Illustrative Eurasian rail corridor · not the full Rail + Ocean itinerary");
     if (routeId === "air") {
       const air: Point[] = Array.from({ length: 41 }, (_, i) => {
         const t = i / 40;
@@ -63,8 +63,8 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
         .bindTooltip(`${city} · ${kind === "origin" ? "CN" : "TR"}`, { permanent: true, direction: "top", className: "corridor-city-label", offset: [0, -10] }).addTo(layer);
     }
     if (disruption) {
-      L.marker(suez, { icon: L.divIcon({ className: "corridor-suez", html: '<span class="corridor-warning-ring"></span><span class="corridor-warning-dot">!</span>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: "Suez Canal blocked" })
-        .bindTooltip("Suez Canal blocked", { permanent: true, direction: "bottom", className: "corridor-warning-label", offset: [0, 12] }).addTo(layer);
+      L.marker(suez, { icon: L.divIcon({ className: "corridor-suez", html: '<span class="corridor-warning-ring"></span><span class="corridor-warning-dot">!</span>', iconSize: [28, 28], iconAnchor: [14, 14] }), title: "Simulated Suez blockage" })
+        .bindTooltip("Simulated Suez blockage", { permanent: true, direction: "right", className: "corridor-warning-label", offset: [12, 0] }).addTo(layer);
     }
     const visible = disruption || routeId === "ocean-truck" ? [...ocean, ...rail] : routeId === "air" ? [start, end, [52, 80] as Point] : rail;
     bounds.current = L.latLngBounds(visible);
@@ -88,8 +88,8 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
       </div>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
-      <div className="flex flex-wrap items-center gap-4"><span className="flex items-center gap-1.5"><span className={`w-5 border-t-2 ${disruption ? "border-destructive" : "border-accent"}`} />{disruption ? "Ocean · disrupted" : routeId === "air" ? "Air corridor" : "Ocean corridor"}</span>{(disruption || routeId === "rail-ocean") && <span className="flex items-center gap-1.5"><span className="w-5 border-t-2 border-dashed border-primary" />Eurasian rail</span>}</div>
-      <span>Illustrative corridors · Not navigational routes</span>
+      <div className="flex flex-wrap items-center gap-4">{(disruption || routeId !== "rail-ocean") && <span className="flex items-center gap-1.5"><span className={`w-5 border-t-2 ${disruption ? "border-destructive" : "border-accent"}`} />{disruption ? "Ocean · simulated disruption" : routeId === "air" ? "Air corridor" : "Ocean corridor"}</span>}{(disruption || routeId === "rail-ocean") && <span className="flex items-center gap-1.5"><span className="w-5 border-t-2 border-dashed border-primary" />Eurasian rail</span>}</div>
+      <span>Illustrative corridors · Not full itineraries or calculated diversion paths</span>
     </div>
   </section>;
 }
