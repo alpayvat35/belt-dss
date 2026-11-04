@@ -1,4 +1,4 @@
-# BELT-DSS — Methodology (Phases 1–2)
+# BELT-DSS — Methodology (Phases 1–3)
 
 Developed by **Alp Ayvat**, a high school student interested in Industrial Engineering, Operations Research, Supply Chain Optimization, and Sustainable Transportation. This educational portfolio project studies the China–Türkiye corridor within the broader Belt and Road context.
 
@@ -144,8 +144,44 @@ This is a one-parameter deterministic analysis, not a probability-based uncertai
 
 Validation additionally checks exact $100 baseline preservation, unchanged physical calculations, price-to-objective conversion at $0/$100/$300, and minimum-cost ranking and explanation decomposition at every $25 step across the tested city/urgency/disruption/weight combinations.
 
-## 11. Future improvements
+## 11. Educational network optimization (Phase 3)
 
-Potential later work includes externally verified coefficient provenance, multi-parameter sensitivity and uncertainty analysis, mode-specific emissions boundaries, empirically calibrated time penalties, network-based distances and Suez-dependent edges, actual diversion impacts, graph-based shortest-path optimization, capacity/reliability constraints, and Pareto analysis. Real-time market integration or forecasting would require suitable data and separate validation. These broader capabilities are not implemented in Phase 2.
+Phase 3 adds a **separate directed network optimizer**, leaving the original three alternatives, their numerical calculations, carbon sensitivity and recommendation unchanged. It is an educational network model, not a real-world logistics routing service or real-time global optimizer.
+
+### Graph and geographic context
+
+The graph has 12 nodes: Shanghai, Shenzhen, Xi'an, Khorgos, Aktau, Baku, Tbilisi, Kars, Istanbul, Izmir, Singapore and a Suez Canal transit waypoint. Its 16 directed edges aggregate plausible westbound corridors; they do not establish nonstop or scheduled services. Shanghai/Shenzhen feed Xi'an, then rail crosses Kazakhstan toward Aktau; a Caspian maritime link connects to Baku, followed by rail through Tbilisi/Kars to Istanbul and a road connection to Izmir. An assumed maritime corridor passes Singapore and Suez toward Türkiye; illustrative air links connect the Chinese origins to Istanbul. No reverse connectivity is inferred. Ningbo, Qingdao, Mersin and Ankara are not represented: the interface reports unsupported locations rather than substituting another city.
+
+Geographic plausibility was checked against these publications, **not numerical model calibration**:
+
+- [China State Council portal, 3 July 2024: Xi'an–Baku freight route](https://english.www.gov.cn/news/202407/03/content_WS6684f6fec6d0868f4e8e8cf9.html): describes Xi'an, Horgos/Khorgos, Kazakhstan and the Caspian crossing to Baku; it does not identify Aktau as the departure port for that service.
+- [Republic of Türkiye Ministry of Foreign Affairs: Türkiye's Multilateral Transportation Policy](https://www.mfa.gov.tr/turkiye_s-multilateral-transportation-policy.en.mfa): describes the Middle Corridor via Kazakhstan/Caspian/Azerbaijan/Georgia/Türkiye, Aktau/Kuryk and Baku/Alat ports, and Baku–Tbilisi–Kars railway.
+- [Maersk Asia–Türkiye westbound service map](https://www.maersk.com/~/media_sc9/maersk/local-information/map/files/asia-pacific/shipping-from-asia-pacific-to-europe/ae15-westbound-v3.pdf): shows Shanghai/Shekou, Singapore, Red Sea/Port Said and Türkiye-area port geography. It does not verify current sailings, İzmir calls or model distances.
+
+City nodes simplify port/station locations (for example Baku/Alat and Istanbul-area ports). Chinese feeder legs, direct air links and Istanbul–Izmir trucking are illustrative plausible connections, not verified operating services. The Suez node is a transit waypoint, not a cargo transfer terminal. The Caspian edge uses the existing ocean cost/emission/speed coefficients as an illustrative proxy, not a calibrated ferry model. All network distances, charges and delays are illustrative assumptions; none are measured or externally verified. Typed graph data live in `src/lib/transport-network.ts`; chosen edge assumptions are inspectable in the interface. Map coordinates and intermediate waypoints are schematic display data only and never determine weights.
+
+### Additive edge calculations
+
+For each edge i, freight `Cᵢ = Fᵢ + W dᵢ cᵢ`, emissions `Eᵢ = W dᵢ eᵢ / 1000`, and lead time `Tᵢ = dᵢ / vᵢ + Hᵢ + Bᵢ`. Fixed charges, handling and customs are added once per traversed edge. No original-template route-level additions are added again. The graph explicitly assigns illustrative delay/charge values per edge, including zero where none is modeled. It reuses the unchanged mode coefficients and urgency penalties from `src/lib/model-assumptions.ts`.
+
+The selected objective is edge freight dollars, edge lead-time days, or `Zᵢ = Cᵢ + (p/1000)Eᵢ + μWTᵢ` dollars. Here p is the selected $/tonne CO₂ price, W is selected cargo tonnes, and μ is selected urgency $/tonne/day. Each path total is the sum of its traversed edge values, so `ΣZᵢ = ΣCᵢ + λΣEᵢ + μWΣTᵢ`. Emissions alone are reported, not a fourth optimization objective. Cost/time objectives still report the resulting generalized cost but do not minimize it.
+
+### Dijkstra's algorithm
+
+Dijkstra repeatedly settles the reachable node with the smallest tentative objective value and relaxes outgoing edges. A predecessor is updated only for a strictly lower cumulative value; the returned node sequence is reconstructed from predecessors. It searches the graph rather than selecting from predefined complete paths. All calculated edge weights are checked to be finite and non-negative, satisfying Dijkstra's requirement. A simple array scan is sufficient for this small graph (O(V² + VE) worst case for the readable implementation). Missing endpoints and disconnected destinations return explicit states. Identical origin/destination yields a zero-edge, zero-total path.
+
+**Deterministic exact ties:** node settlement follows graph node order; equal relaxations keep the first predecessor encountered in edge order. This is not a secondary preference for fewer stops or lower emissions. Full precision is retained for decisions and totals; only display values are rounded.
+
+### Suez disruption and limitations
+
+In the network only, enabling disruption **removes edges explicitly marked `usesSuezCanal: true`**. The Singapore–Suez and Suez–Türkiye edges are unavailable. Other ocean edges, particularly Aktau–Baku, remain unchanged. Dijkstra runs on the remaining connectivity; it reports no route if the destination cannot be reached. No Cape diversion or invented replacement distances are generated. This differs intentionally from the preserved original comparison, which still applies +40% time/+20% variable cost to every ocean leg with unchanged emissions.
+
+Optimality means minimum additive objective **within this illustrative graph and its assumptions**, not a globally optimal real shipment. The model omits schedules, capacity, congestion, uncertainty, service availability, transfer compatibility and calibrated border/port operations. It models neither Pareto optimization nor live markets. The overlay is a distinguishable schematic network trace, not an operational itinerary, and is shown only while the network section is expanded.
+
+Validation adds known shortest-path graphs, different objectives, directionality, disconnected/unsupported endpoints, zero-weight cycles, exact ties, Suez-only exclusion, edge delay/fixed-charge accounting, weight/carbon units, invalid inputs and unchanged original reference results. Supported shipment pairs are exercised over all urgency levels, 1/20/100 tonnes, $0/$100/$300 carbon prices, both disruption states and all three objectives. These tests establish algorithmic consistency, not real-world predictive validity.
+
+## 12. Future improvements
+
+Potential later work includes externally verified coefficient provenance, multi-parameter sensitivity and uncertainty analysis, mode-specific emissions boundaries, empirically calibrated time penalties, verified network distances and Suez-dependent services, actual diversion impacts, capacity/reliability constraints, and Pareto analysis. Phase 3 demonstrates graph-based shortest paths on illustrative data only. Real-time market integration or forecasting would require suitable data and separate validation; these broader capabilities are not implemented.
 
 > Results are model-based estimates using illustrative transport parameters. They are intended for educational scenario analysis and do not represent live freight quotations.
