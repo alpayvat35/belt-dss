@@ -190,6 +190,8 @@
 .corridor-ocean-blocked { stroke: var(--destructive); }
 .corridor-rail { stroke: var(--primary); stroke-dasharray: 6 8; }
 .corridor-truck { stroke: var(--warning); stroke-dasharray: 3 5; }
+.corridor-network { stroke: var(--chart-3); fill: none; stroke-dasharray: 2 5; }
+.corridor-network-node { stroke: var(--chart-3); fill: var(--card); fill-opacity: 1; }
 .corridor-city-dot { display: block; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 4px solid var(--card); box-shadow: 0 0 0 1px var(--accent); }
 .corridor-city-destination .corridor-city-dot { background: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
 .corridor-warning-ring { position: absolute; inset: 0; border: 2px solid var(--destructive); border-radius: 50%; animation: status-pulse 2s ease-out infinite; }

@@ -14,3 +14,4 @@
 - Recommendation explanations derive objective decompositions and stable rankings in the pure routing module; this keeps explanations consistent with the actual selection rule.
 - Dashboard metrics and comparisons derive from the same routing results and nominal-network baseline; trend indicators must not imply historical or live market data.
 - Leaflet loads dynamically inside the corridor map effect, with instance and observer cleanup, so browser-only imports never execute during SSR; map waypoints are illustrative and never feed routing calculations.
+- Network optimization is a separate pure Dijkstra module over typed illustrative graph data; shared mode coefficients are reused and original routing math is never replaced. Network overlays render computed edges only while the network section is open.

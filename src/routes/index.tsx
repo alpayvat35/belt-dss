@@ -16,6 +16,9 @@ import { CorridorMap } from "@/components/corridor-map";
 import { ModelTransparency, RecommendationExplanation } from "@/components/model-transparency";
 import { MODEL_DISCLAIMER, CARBON_PRICE_SENSITIVITY } from "@/lib/model-assumptions";
 import { CarbonPriceSensitivity } from "@/components/carbon-price-sensitivity";
+import { NetworkOptimization } from "@/components/network-optimization";
+import { optimizeNetwork, type NetworkObjective } from "@/lib/network-optimization";
+import { TRANSPORT_NETWORK } from "@/lib/transport-network";
 import { Activity, ArrowDownRight, ArrowUpRight, ArrowRight, Check, Clock3, DollarSign, Leaf, Ship, Plane, TrainFront, Truck, AlertTriangle, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -52,6 +55,11 @@ function Dashboard() {
   const [urgency, setUrgency] = useState<Urgency>("low");
   const [disruption, setDisruption] = useState(false);
   const [carbonPricePerTonne, setCarbonPrice] = useState<number>(CARBON_PRICE_SENSITIVITY.default);
+  const [networkObjective, setNetworkObjective] = useState<NetworkObjective>("tradeoff");
+  const [networkOpen, setNetworkOpen] = useState(false);
+  const network = useMemo(() => optimizeNetwork(TRANSPORT_NETWORK, {
+    origin, destination, weightT, urgency, disruption, carbonPricePerTonne, objective: networkObjective,
+  }), [origin, destination, weightT, urgency, disruption, carbonPricePerTonne, networkObjective]);
 
   const routes = useMemo(
     () => computeRoutes({ origin, destination, weightT, urgency, disruption, carbonPricePerTonne }),
@@ -117,7 +125,7 @@ function Dashboard() {
           </div>
         </Panel>
 
-        <CorridorMap origin={origin} destination={destination} disruption={disruption} routeId={best.id} routeName={best.name} />
+        <CorridorMap origin={origin} destination={destination} disruption={disruption} routeId={best.id} routeName={best.name} networkPath={networkOpen && network.status === "ok" ? network.path : undefined} />
 
         <div className="grid gap-4 md:grid-cols-3">
           <Stat label="Estimated freight cost" value={usd(best.cost)} icon={DollarSign} tone="primary" trend={Math.abs(costChange) < 0.05 ? "Unchanged vs. baseline scenario" : `${Math.abs(costChange).toFixed(1)}% ${costChange > 0 ? "higher" : "lower"} vs. baseline`} adverse={costChange > 0} />
@@ -137,6 +145,7 @@ function Dashboard() {
         </section>
 
         <CarbonPriceSensitivity price={carbonPricePerTonne} onPriceChange={setCarbonPrice} zeroPriceWinner={zeroPriceWinner} currentWinner={best} />
+        <NetworkOptimization result={network} objective={networkObjective} onObjectiveChange={setNetworkObjective} open={networkOpen} onOpenChange={setNetworkOpen} disruption={disruption} />
         <ModelTransparency carbonPricePerTonne={carbonPricePerTonne} />
 
         <div><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold">Route comparison</h2><span className="text-xs text-muted-foreground">3 intermodal options</span></div><div className="grid gap-4 lg:grid-cols-3">{routes.map((r, i) => {
