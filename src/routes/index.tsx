@@ -7,14 +7,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
-  ORIGINS, DESTINATIONS, URGENCY, MODES, SHADOW_CARBON_PRICE, computeRoutes, recommend,
+  ORIGINS, DESTINATIONS, URGENCY, MODES, computeRoutes, recommend,
   type Origin, type Destination, type Urgency,
 } from "@/lib/routing";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CorridorMap } from "@/components/corridor-map";
 import { ModelTransparency, RecommendationExplanation } from "@/components/model-transparency";
-import { MODEL_DISCLAIMER } from "@/lib/model-assumptions";
+import { MODEL_DISCLAIMER, CARBON_PRICE_SENSITIVITY } from "@/lib/model-assumptions";
+import { CarbonPriceSensitivity } from "@/components/carbon-price-sensitivity";
 import { Activity, ArrowDownRight, ArrowUpRight, ArrowRight, Check, Clock3, DollarSign, Leaf, Ship, Plane, TrainFront, Truck, AlertTriangle, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -50,13 +51,15 @@ function Dashboard() {
   const [weightT, setWeight] = useState(20);
   const [urgency, setUrgency] = useState<Urgency>("low");
   const [disruption, setDisruption] = useState(false);
+  const [carbonPricePerTonne, setCarbonPrice] = useState<number>(CARBON_PRICE_SENSITIVITY.default);
 
   const routes = useMemo(
-    () => computeRoutes({ origin, destination, weightT, urgency, disruption }),
-    [origin, destination, weightT, urgency, disruption],
+    () => computeRoutes({ origin, destination, weightT, urgency, disruption, carbonPricePerTonne }),
+    [origin, destination, weightT, urgency, disruption, carbonPricePerTonne],
   );
   const best = recommend(routes);
-  const baseline = recommend(computeRoutes({ origin, destination, weightT, urgency, disruption: false }));
+  const baseline = recommend(computeRoutes({ origin, destination, weightT, urgency, disruption: false, carbonPricePerTonne }));
+  const zeroPriceWinner = recommend(computeRoutes({ origin, destination, weightT, urgency, disruption, carbonPricePerTonne: 0 }));
   const rerouted = disruption && baseline.id !== best.id;
 
   const prev = useRef(best.id);
@@ -129,11 +132,12 @@ function Dashboard() {
           </div>
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm"><div className="flex items-center gap-3"><span>{origin}</span><ArrowRight className="h-4 w-4 text-primary" /><span>{destination}</span><span className="border-l border-border pl-3 text-muted-foreground">{URGENCY[urgency].label} urgency</span></div><div className="text-muted-foreground">Generalized cost <span className="ml-2 font-mono font-semibold text-foreground">{usd(best.generalizedCost)}</span></div></div>
            {rerouted && <p className="mt-4 flex items-center gap-2 text-xs text-warning"><AlertTriangle className="h-4 w-4" />Recommendation changed from {baseline.name} under the illustrative disruption scenario</p>}
-           <p className="mt-5 border-t border-primary/15 pt-4 text-[11px] leading-relaxed text-muted-foreground">Generalized cost = Freight Cost + (CO₂ Emissions × Shadow Carbon Price) + (Lead Time × Cargo Weight × Urgency Penalty)<span className="mt-1 block text-[10px]">Shadow carbon price ${SHADOW_CARBON_PRICE.toFixed(2)}/kg CO₂ · urgency penalty ${URGENCY[urgency].delayPerTonDay}/tonne/day</span></p>
-           <RecommendationExplanation routes={routes} weightT={weightT} urgency={urgency} />
+           <p className="mt-5 border-t border-primary/15 pt-4 text-[11px] leading-relaxed text-muted-foreground">Generalized cost = Freight Cost + (CO₂ Emissions × Shadow Carbon Price) + (Lead Time × Cargo Weight × Urgency Penalty)<span className="mt-1 block text-[10px]">Shadow carbon price ${(carbonPricePerTonne / 1000).toFixed(3)}/kg CO₂ (${carbonPricePerTonne}/tonne CO₂) · urgency penalty ${URGENCY[urgency].delayPerTonDay}/tonne/day</span></p>
+           <RecommendationExplanation routes={routes} weightT={weightT} urgency={urgency} carbonPricePerTonne={carbonPricePerTonne} />
         </section>
 
-         <ModelTransparency />
+        <CarbonPriceSensitivity price={carbonPricePerTonne} onPriceChange={setCarbonPrice} zeroPriceWinner={zeroPriceWinner} currentWinner={best} />
+        <ModelTransparency carbonPricePerTonne={carbonPricePerTonne} />
 
         <div><div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-semibold">Route comparison</h2><span className="text-xs text-muted-foreground">3 intermodal options</span></div><div className="grid gap-4 lg:grid-cols-3">{routes.map((r, i) => {
           const Icon = r.id === "air" ? Plane : r.id === "rail-ocean" ? TrainFront : Ship;
