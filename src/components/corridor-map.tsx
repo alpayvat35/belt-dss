@@ -10,7 +10,7 @@ const origins: Record<Origin, Point> = { Shanghai: [31.23, 121.47], Shenzhen: [2
 const destinations: Record<Destination, Point> = { Istanbul: [41.01, 28.98], Izmir: [38.42, 27.14], Mersin: [36.8, 34.63], Ankara: [39.93, 32.86] };
 const suez: Point = [30.6, 32.3];
 
-export function CorridorMap({ origin, destination, disruption, routeId, routeName, networkPath }: { origin: Origin; destination: Destination; disruption: boolean; routeId: string; routeName: string; networkPath?: NetworkPath }) {
+export function CorridorMap({ origin, destination, disruption, routeId, routeName, networkPath }: { origin: Origin; destination: Destination; disruption: boolean; routeId: string; routeName: string; networkPath?: NetworkPath | undefined }) {
   const container = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<{ L: typeof Leaflet; map: Leaflet.Map }>();
   const [failed, setFailed] = useState(false);

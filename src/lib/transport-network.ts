@@ -3,7 +3,7 @@ import type { Mode } from "./model-assumptions";
 
 export const NETWORK_NOTICE = "Simplified educational network · all distances, charges and delays are illustrative, not verified service data. Links aggregate corridors, not direct scheduled services.";
 const edge = (id: string, from: string, to: string, mode: Mode, distanceKm: number, handlingDays: number, customsDays = 0, fixedCost = 0, usesSuezCanal = false, waypoints?: [number, number][]): NetworkEdge =>
-  ({ id, from, to, mode, distanceKm, handlingDays, customsDays, fixedCost, usesSuezCanal, waypoints });
+  ({ id, from, to, mode, distanceKm, handlingDays, customsDays, fixedCost, usesSuezCanal, ...(waypoints ? { waypoints } : {}) });
 
 /** Directed westbound corridor abstractions; no reverse service is assumed. */
 export const TRANSPORT_NETWORK: TransportationNetwork = {
