@@ -1,8 +1,8 @@
 # BELT-DSS Phase 3
-- [ ] Add a separate illustrative directed network and deterministic Dijkstra optimizer.
-- [ ] Add expandable results and optional map overlay; preserve original comparison.
-- [ ] Document geography, assumptions, algorithm, and Suez connectivity handling.
-- [ ] Run all tests and verify desktop/mobile flows and preview checks.
+- [x] Add a separate illustrative directed network and deterministic Dijkstra optimizer.
+- [x] Add expandable results and optional map overlay; preserve original comparison.
+- [x] Document geography, assumptions, algorithm, and Suez connectivity handling.
+- [x] Run all tests and verify desktop/mobile flows and preview checks (422 tests pass; no browser errors or horizontal overflow; automatic preview checks report build OK. Separate manual TypeScript/production checks are prohibited by this environment).
 
 # BELT-DSS Phase 2
 - [x] Add lightweight carbon-price sensitivity and current-value transparency without changing physical calculations.
