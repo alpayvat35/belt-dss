@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { computeRoutes, recommend, explainRecommendation, ORIGINS, DESTINATIONS, URGENCY, type Urgency } from "./routing";
-import { ASSUMPTION_GROUPS, MODES, SHADOW_CARBON_PRICE } from "./model-assumptions";
+import { ASSUMPTION_GROUPS, MODES, SHADOW_CARBON_PRICE, CARBON_PRICE_SENSITIVITY } from "./model-assumptions";
 
 const base = { origin: "Shanghai", destination: "Istanbul", weightT: 20, urgency: "low", disruption: false } as const;
 
@@ -10,6 +10,52 @@ function required<T>(value: T | undefined): T {
 }
 
 describe("routing", () => {
+  it("carbon sensitivity control uses 0–300 dollars per tonne, default 100, step 25", () => {
+    expect(CARBON_PRICE_SENSITIVITY).toEqual({ min: 0, max: 300, default: 100, step: 25 });
+  });
+
+  it("explicit $100/tonne reproduces Phase 1 exactly across the input domain", () => {
+    for (const inputs of scenarios) {
+      expect(computeRoutes({ ...inputs, carbonPricePerTonne: 100 })).toEqual(computeRoutes(inputs));
+    }
+  });
+
+  it("increasing carbon price leaves every physical transport calculation unchanged", () => {
+    for (const inputs of scenarios) {
+      const zero = computeRoutes({ ...inputs, carbonPricePerTonne: 0 });
+      computeRoutes({ ...inputs, carbonPricePerTonne: 300 }).forEach((r, i) => {
+        const a = required(zero[i]);
+        expect({ cost: r.cost, co2: r.co2, days: r.days, legs: r.legs, customs: r.customsDays, handling: r.handlingDays, fixed: r.fixedCost, variable: r.variableCost, time: r.timePenalty, scores: r.scores })
+          .toEqual({ cost: a.cost, co2: a.co2, days: a.days, legs: a.legs, customs: a.customsDays, handling: a.handlingDays, fixed: a.fixedCost, variable: a.variableCost, time: a.timePenalty, scores: a.scores });
+        expect(r.generalizedCost - a.generalizedCost).toBeCloseTo(a.co2 * 0.3, 7);
+      });
+    }
+  });
+
+  it.each([0, 100, 300])("correctly converts $%s/tonne CO₂ at slider minimum, default and maximum", (price) => {
+    for (const r of computeRoutes({ ...base, carbonPricePerTonne: price })) {
+      expect(r.carbonCost).toBe(r.co2 * (price / 1000));
+      expect(r.generalizedCost).toBe(r.cost + r.timePenalty + r.carbonCost);
+    }
+  });
+
+  it("recommendation and explanation minimize actual costs at every slider step", () => {
+    for (let price = 0; price <= 300; price += 25) {
+      for (const inputs of scenarios) {
+        const routes = computeRoutes({ ...inputs, carbonPricePerTonne: price });
+        const explanation = explainRecommendation(routes);
+        expect(recommend(routes).generalizedCost).toBe(Math.min(...routes.map((r) => r.generalizedCost)));
+        expect(explanation.winner).toBe(recommend(routes));
+        expect(explanation.gap).toBeCloseTo(explanation.contributions.freight + explanation.contributions.carbon + explanation.contributions.time, 7);
+      }
+    }
+  });
+
+  it("does not force a different recommendation when the carbon price changes", () => {
+    expect(recommend(computeRoutes({ ...base, carbonPricePerTonne: 0 })).id).toBe("ocean-truck");
+    expect(recommend(computeRoutes({ ...base, carbonPricePerTonne: 300 })).id).toBe("ocean-truck");
+  });
+
   it("disruption raises ocean leg time by 40% and cost by 20%", () => {
     const a = required(required(computeRoutes(base)[0]).legs[0]);
     const b = required(required(computeRoutes({ ...base, disruption: true })[0]).legs[0]);

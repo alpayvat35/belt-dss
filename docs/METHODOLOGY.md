@@ -1,4 +1,4 @@
-# BELT-DSS — Phase 1 Methodology
+# BELT-DSS — Methodology (Phases 1–2)
 
 Developed by **Alp Ayvat**, a high school student interested in Industrial Engineering, Operations Research, Supply Chain Optimization, and Sustainable Transportation. This educational portfolio project studies the China–Türkiye corridor within the broader Belt and Road context.
 
@@ -44,6 +44,16 @@ Z and C are dollars; E is kg CO₂; λ is $/kg CO₂; μ is $/tonne/day. Thus ev
 | Air | 1.10 | 600 | 9,000 |
 
 The shadow carbon price is **$0.10/kg CO₂**, equivalent to **$100/tonne CO₂**. It represents a modeling valuation, not an actual government-imposed carbon tax.
+
+### Data References
+
+The following verified publication references provide **methodological and sector context only**, not numerical validation of the model:
+
+- **ISO (2023), ISO 14083:2023**, *Greenhouse gases — Quantification and reporting of greenhouse gas emissions arising from transport chain operations*, Edition 1. [Official standard page](https://www.iso.org/standard/78864.html). Relevant to transport-chain GHG accounting and reporting; referencing it does not establish compliance with the standard.
+- **Smart Freight Centre (2023), GLEC Framework for Logistics Emissions Accounting and Reporting, Version 3.0**. [Official release notice](https://www.smartfreightcentre.org/en/about-sfc/news/a-solid-foundation-to-further-accelerate-freight-decarbonization-smart-freight-centre-releases-updated-glec-framework-version-30/). Provides logistics emissions-accounting context; the publisher describes alignment with ISO 14083. No claim is made that BELT-DSS implements its accounting procedures or uses its factors.
+- **UNCTAD (2023), Review of Maritime Transport 2023: Towards a green and just transition**. [Official publication page](https://unctad.org/publication/review-maritime-transport-2023). Provides maritime transport and decarbonization context, not a validation source for the calculator’s freight rates, speeds or distances.
+
+No specific published value has been verified against the current emission factors, freight cost coefficients, effective speeds, or distances. All remain **illustrative assumptions**, unchanged from Phase 1. A future source-verified coefficient would need an identifiable publication and exact value, matching units, relevant operating conditions and emissions boundaries. A CO₂-only estimate is not automatically equivalent to a full greenhouse-gas inventory in CO₂-equivalent units.
 
 | Urgency | μ ($/tonne/day) |
 |---|---:|
@@ -122,8 +132,20 @@ Shanghai → Istanbul, 20 tonnes, Low urgency, no disruption:
 
 Ocean + Truck is selected. With the illustrative disruption, Rail + Ocean is selected. Baseline coefficients and numerical behavior are preserved in Phase 1; no verified numerical bug was identified. Run `bunx vitest run` from the repository root to reproduce validation.
 
-## 10. Future improvements
+## 10. Carbon price sensitivity analysis
 
-Potential later work includes externally verified coefficient provenance, uncertainty/sensitivity analysis, mode-specific emissions boundaries, empirically calibrated time penalties, network-based distances and Suez-dependent edges, actual diversion impacts, graph-based shortest-path optimization, capacity/reliability constraints, and Pareto analysis. Real-time market integration or forecasting would require suitable data and separate validation. None of these capabilities is claimed for Phase 1.
+Sensitivity analysis varies one assumption while holding other inputs constant to observe its influence on results. Phase 2 varies the shadow carbon price from **$0 to $300/tonne CO₂ in $25 steps**, with **$100/tonne CO₂** as the default. This range and step are educational scenario choices, not externally validated policy or market values.
+
+For a selected price p in $/tonne CO₂, the calculator uses **λ = p / 1000** in $/kg CO₂. It recomputes `Zᵣ = Cᵣ + (p / 1000)Eᵣ + μWTᵣ`, ranks the same three alternatives, and reports the best–second-best gap. Freight costs, emissions, distances, handling, customs, transit times, urgency penalties and disruption multipliers remain unchanged for each route. The default exactly reproduces Phase 1 results.
+
+Increasing the price makes emissions more expensive in the objective, which may favor lower-emission alternatives. A recommendation need not change if freight and time differences still dominate; the comparison explicitly reports the recommendation at zero and at the selected price. Carbon-price effects are compared under the same shipment, urgency and disruption inputs. Dashboard disruption comparisons likewise use the same selected carbon price in both scenarios.
+
+This is a one-parameter deterministic analysis, not a probability-based uncertainty study, empirical calibration, Pareto analysis or a new optimization algorithm. The limited range may not reach a switching point, and an unchanged recommendation does not prove robustness outside that range or under other assumptions. The shadow price is an economic modeling weight, not an actual government tax.
+
+Validation additionally checks exact $100 baseline preservation, unchanged physical calculations, price-to-objective conversion at $0/$100/$300, and minimum-cost ranking and explanation decomposition at every $25 step across the tested city/urgency/disruption/weight combinations.
+
+## 11. Future improvements
+
+Potential later work includes externally verified coefficient provenance, multi-parameter sensitivity and uncertainty analysis, mode-specific emissions boundaries, empirically calibrated time penalties, network-based distances and Suez-dependent edges, actual diversion impacts, graph-based shortest-path optimization, capacity/reliability constraints, and Pareto analysis. Real-time market integration or forecasting would require suitable data and separate validation. These broader capabilities are not implemented in Phase 2.
 
 > Results are model-based estimates using illustrative transport parameters. They are intended for educational scenario analysis and do not represent live freight quotations.
