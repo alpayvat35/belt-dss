@@ -1,4 +1,4 @@
-/** BELT-DSS Phase 1: no coefficients below have documented external evidence. */
+/** BELT-DSS: contextual references do not verify the numerical coefficients below. */
 export type SourceStatus = "Illustrative assumption" | "Model-derived calculation" | "Verified external source";
 export interface Assumption {
   parameter: string;
@@ -29,6 +29,10 @@ export const URGENCY: Record<Urgency, { label: string; delayPerTonDay: number; n
   critical: { label: "Critical", delayPerTonDay: 1000, note: "Line-down risk" },
 };
 export const SHADOW_CARBON_PRICE = 0.1; // USD/kg CO₂, equivalent to USD 100/tonne CO₂.
+/** Sensitivity control in USD/tonne CO₂; the Phase 1 default remains unchanged. */
+export const CARBON_PRICE_SENSITIVITY = {
+  min: 0, max: 300, step: 25, default: SHADOW_CARBON_PRICE * 1000,
+} as const;
 export const ORIGIN_OFFSET_KM: Record<Origin, number> = { Shanghai: 0, Shenzhen: 900, Ningbo: 150, Qingdao: 700 };
 /** Illustrative base distances in km, not measured network paths. */
 export const DESTINATION_DISTANCES_KM: Record<Destination, { sea: number; truck: number; air: number; rail: number }> = {
@@ -80,7 +84,7 @@ export const ASSUMPTION_GROUPS: AssumptionGroup[] = [
     assumption(`${r.name} fixed cost`, r.fixed, "$/shipment", "Added once to variable leg costs."),
   ]) },
   { title: "Decision weights", rows: [
-    assumption("Shadow carbon price", SHADOW_CARBON_PRICE, "$/kg CO₂", "Model valuation of emissions, not an actual government tax."),
+    assumption("Shadow carbon price (baseline)", SHADOW_CARBON_PRICE, "$/kg CO₂", "Baseline model valuation; sensitivity varies $0–$300/tonne CO₂. Not an actual government tax."),
     ...Object.values(URGENCY).map((u) => assumption(`${u.label} urgency penalty`, u.delayPerTonDay, "$/tonne/day", "Illustrative economic cost of time, not a universally accepted freight industry standard.")),
   ] },
   { title: "Disruption scenario", rows: [

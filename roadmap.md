@@ -1,3 +1,8 @@
+# BELT-DSS Phase 2
+- [ ] Add lightweight carbon-price sensitivity and current-value transparency without changing physical calculations.
+- [ ] Verify contextual references and document sensitivity limitations; retain illustrative coefficient statuses.
+- [ ] Run automated tests and verify desktop/mobile interactions and baseline preservation.
+
 # BELT-DSS Phase 1
 - [x] Centralize typed assumptions and preserve baseline mathematics.
 - [x] Add methodology, provenance, and dynamic recommendation explanation.

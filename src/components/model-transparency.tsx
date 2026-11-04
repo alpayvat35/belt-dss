@@ -4,7 +4,7 @@ import { explainRecommendation, type RouteResult } from "@/lib/routing";
 
 const dollars = (value: number) => value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export function RecommendationExplanation({ routes, weightT, urgency }: { routes: RouteResult[]; weightT: number; urgency: Urgency }) {
+export function RecommendationExplanation({ routes, weightT, urgency, carbonPricePerTonne = SHADOW_CARBON_PRICE * 1000 }: { routes: RouteResult[]; weightT: number; urgency: Urgency; carbonPricePerTonne?: number }) {
   const { winner, runnerUp, gap, contributions, fasterDespiteHigherFreight } = explainRecommendation(routes);
   const tied = gap === 0;
   return <div className="mt-5 space-y-3 border-t border-primary/15 pt-4 text-xs leading-relaxed">
@@ -14,13 +14,13 @@ export function RecommendationExplanation({ routes, weightT, urgency }: { routes
       <div><dt className="text-muted-foreground">Second-best Z · {runnerUp.name}</dt><dd className="mt-1 font-mono">{dollars(runnerUp.generalizedCost)}</dd></div>
       <div><dt className="text-muted-foreground">Difference · second-best − winner</dt><dd className="mt-1 font-mono">{dollars(gap)}</dd></div>
     </dl>
-    <p className="text-muted-foreground">Winner’s objective: freight {dollars(winner.cost)} + shadow carbon cost {dollars(winner.carbonCost)} + time penalty {dollars(winner.timePenalty)}. Current weights: λ = {dollars(SHADOW_CARBON_PRICE)}/kg CO₂; μ = {dollars(URGENCY[urgency].delayPerTonDay)}/tonne/day.</p>
+    <p className="text-muted-foreground">Winner’s objective: freight {dollars(winner.cost)} + shadow carbon cost {dollars(winner.carbonCost)} + time penalty {dollars(winner.timePenalty)}. Current weights: λ = ${(carbonPricePerTonne / 1000).toFixed(3)}/kg CO₂ ({dollars(carbonPricePerTonne)}/tonne CO₂); μ = {dollars(URGENCY[urgency].delayPerTonDay)}/tonne/day.</p>
     <p className="text-muted-foreground">Contributions to the gap (second-best − winner): freight {dollars(contributions.freight)}; carbon {dollars(contributions.carbon)}; time {dollars(contributions.time)}. Positive values favor {winner.name}; negative values favor {runnerUp.name}. Distances, mode coefficients, fixed costs, handling/customs delays, and any active ocean penalties feed these terms.</p>
     {fasterDespiteHigherFreight && <p className="text-primary">Compared with {runnerUp.name}, {winner.name} has higher freight cost but shorter lead time ({winner.days.toFixed(2)} vs. {runnerUp.days.toFixed(2)} days); its lower time penalty offsets that freight disadvantage in the combined objective.</p>}
   </div>;
 }
 
-export function ModelTransparency() {
+export function ModelTransparency({ carbonPricePerTonne = SHADOW_CARBON_PRICE * 1000 }: { carbonPricePerTonne?: number }) {
   return <Accordion type="multiple" className="glass-panel px-5 md:px-6">
     <AccordionItem value="methodology" className="border-border">
       <AccordionTrigger>Methodology &amp; Mathematical Model</AccordionTrigger>
@@ -36,7 +36,7 @@ export function ModelTransparency() {
           <li><strong className="text-foreground">Lead time:</strong> T = Σ(leg distance / mode speed × scenario time multiplier) + handling days + customs days. Both route-level delays are added once. Speed is in km/day.</li>
           <li><strong className="text-foreground">Decision:</strong> freight, carbon valuation (λE), and the economic time penalty (μWT) are added in dollars. Higher urgency raises μ, which can favor faster options despite higher freight costs. The lowest Z wins; exact ties retain original template order.</li>
         </ol>
-        <p>Shadow Carbon Price: {dollars(SHADOW_CARBON_PRICE)}/kg CO₂ ({dollars(SHADOW_CARBON_PRICE * 1000)}/tonne CO₂). This is a modeling valuation, not a government-imposed tax.</p>
+        <p>Current Shadow Carbon Price: ${(carbonPricePerTonne / 1000).toFixed(3)}/kg CO₂ ({dollars(carbonPricePerTonne)}/tonne CO₂). Baseline: $0.10/kg CO₂ ($100/tonne CO₂). This is a modeling valuation, not a government-imposed tax.</p>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.values(URGENCY).map((u) => <p key={u.label}><span className="text-foreground">{u.label} urgency</span><br />{dollars(u.delayPerTonDay)}/tonne/day</p>)}</div>
         <p>Urgency penalties are illustrative economic costs of time, not universally accepted freight industry standards.</p>
         <p>Performance scores = 100 × (minimum value among the three options / route value), separately for freight cost, time, and transport CO₂. They are relative comparison scores, not the selection algorithm.</p>

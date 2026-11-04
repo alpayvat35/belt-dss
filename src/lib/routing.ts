@@ -1,6 +1,6 @@
 import {
   MODES, URGENCY, SHADOW_CARBON_PRICE, ORIGIN_OFFSET_KM, DESTINATION_DISTANCES_KM,
-  DISTANCE_RULES, ROUTE_ASSUMPTIONS, DISRUPTION_ASSUMPTION,
+  DISTANCE_RULES, ROUTE_ASSUMPTIONS, DISRUPTION_ASSUMPTION, CARBON_PRICE_SENSITIVITY,
   type Origin, type Destination, type Urgency, type Mode, type RouteId,
 } from "./model-assumptions";
 export { ORIGINS, DESTINATIONS, MODES, URGENCY, SHADOW_CARBON_PRICE, type Origin, type Destination, type Urgency, type Mode } from "./model-assumptions";
@@ -45,9 +45,10 @@ export interface RouteResult {
   scores: { cost: number; speed: number; eco: number };
 }
 
-export interface Inputs { origin: Origin; destination: Destination; weightT: number; urgency: Urgency; disruption: boolean }
+export interface Inputs { origin: Origin; destination: Destination; weightT: number; urgency: Urgency; disruption: boolean; /** USD/tonne CO₂; omitted preserves Phase 1. */ carbonPricePerTonne?: number }
 
 export function computeRoutes(inp: Inputs): RouteResult[] {
+  const carbonPricePerKg = (inp.carbonPricePerTonne ?? CARBON_PRICE_SENSITIVITY.default) / 1000;
   const raw = templates(inp.origin, inp.destination).map((tpl) => {
     const legs = tpl.legs.map((l) => {
       const m = MODES[l.mode];
@@ -62,7 +63,7 @@ export function computeRoutes(inp: Inputs): RouteResult[] {
     const days = tpl.handlingDays + tpl.customsDays + legs.reduce((s, l) => s + l.days, 0);
     const co2 = legs.reduce((s, l) => s + l.co2, 0);
     const timePenalty = days * URGENCY[inp.urgency].delayPerTonDay * inp.weightT;
-    const carbonCost = co2 * SHADOW_CARBON_PRICE;
+    const carbonCost = co2 * carbonPricePerKg;
     // Addition order retained to preserve baseline floating-point results.
     const generalizedCost = cost + timePenalty + carbonCost;
     return { id: tpl.id, name: tpl.name, legs, cost, days, customsDays: tpl.customsDays,
