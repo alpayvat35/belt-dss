@@ -3,13 +3,14 @@ import type * as Leaflet from "leaflet";
 import { Focus, Globe2, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Origin, Destination } from "@/lib/routing";
+import type { NetworkPath } from "@/lib/network-optimization";
 
 type Point = [number, number];
 const origins: Record<Origin, Point> = { Shanghai: [31.23, 121.47], Shenzhen: [22.54, 114.06], Ningbo: [29.87, 121.55], Qingdao: [36.07, 120.38] };
 const destinations: Record<Destination, Point> = { Istanbul: [41.01, 28.98], Izmir: [38.42, 27.14], Mersin: [36.8, 34.63], Ankara: [39.93, 32.86] };
 const suez: Point = [30.6, 32.3];
 
-export function CorridorMap({ origin, destination, disruption, routeId, routeName }: { origin: Origin; destination: Destination; disruption: boolean; routeId: string; routeName: string }) {
+export function CorridorMap({ origin, destination, disruption, routeId, routeName, networkPath }: { origin: Origin; destination: Destination; disruption: boolean; routeId: string; routeName: string; networkPath?: NetworkPath }) {
   const container = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<{ L: typeof Leaflet; map: Leaflet.Map }>();
   const [failed, setFailed] = useState(false);
@@ -67,10 +68,23 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
         .bindTooltip("Simulated Suez blockage", { permanent: true, direction: "right", className: "corridor-warning-label", offset: [12, 0] }).addTo(layer);
     }
     const visible = disruption || routeId === "ocean-truck" ? [...ocean, ...rail] : routeId === "air" ? [start, end, [52, 80] as Point] : rail;
-    bounds.current = L.latLngBounds(visible);
+    const networkPoints: Point[] = [];
+    if (networkPath) {
+      networkPath.edges.forEach((edge, index) => {
+        const from = networkPath.nodes[index];
+        const to = networkPath.nodes[index + 1];
+        if (!from || !to) return;
+        const points = [from.coordinates, ...(edge.waypoints ?? []), to.coordinates];
+        networkPoints.push(...points);
+        L.polyline(points, { className: "corridor-network", weight: 4, opacity: 0.95 })
+          .bindTooltip(`Educational network: ${edge.from} → ${edge.to} · ${edge.mode} · schematic link`, { sticky: true }).addTo(layer);
+        L.circleMarker(from.coordinates, { className: "corridor-network-node", radius: 4, weight: 2 }).bindTooltip(from.id).addTo(layer);
+      });
+    }
+    bounds.current = L.latLngBounds([...visible, ...networkPoints]);
     map.fitBounds(bounds.current, { padding: [35, 40], animate: false });
     return () => { layer.remove(); };
-  }, [engine, origin, destination, disruption, routeId]);
+  }, [engine, origin, destination, disruption, routeId, networkPath]);
 
   return <section className="glass-panel overflow-hidden" aria-label="Supply chain corridor map">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -89,6 +103,7 @@ export function CorridorMap({ origin, destination, disruption, routeId, routeNam
     </div>
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3 text-[10px] text-muted-foreground">
       <div className="flex flex-wrap items-center gap-4">{(disruption || routeId !== "rail-ocean") && <span className="flex items-center gap-1.5"><span className={`w-5 border-t-2 ${disruption ? "border-destructive" : "border-accent"}`} />{disruption ? "Ocean · simulated disruption" : routeId === "air" ? "Air corridor" : "Ocean corridor"}</span>}{(disruption || routeId === "rail-ocean") && <span className="flex items-center gap-1.5"><span className="w-5 border-t-2 border-dashed border-primary" />Eurasian rail</span>}</div>
+      {networkPath && <span className="flex items-center gap-1.5 text-chart-3"><span className="w-5 border-t-2 border-chart-3" />Educational network · schematic links</span>}
       <span>Illustrative corridors · Not full itineraries or calculated diversion paths</span>
     </div>
   </section>;

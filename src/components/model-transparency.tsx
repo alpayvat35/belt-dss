@@ -25,7 +25,7 @@ export function ModelTransparency({ carbonPricePerTonne = SHADOW_CARBON_PRICE * 
     <AccordionItem value="methodology" className="border-border">
       <AccordionTrigger>Methodology &amp; Mathematical Model</AccordionTrigger>
       <AccordionContent className="space-y-4 text-xs leading-relaxed text-muted-foreground">
-        <p>BELT-DSS compares three predefined transport alternatives. It evaluates each option with the same inputs, then selects the smallest generalized cost. It does not search a geographic transport network.</p>
+        <p>The original BELT-DSS comparison evaluates three predefined transport alternatives with the same inputs, then selects the smallest generalized cost. The separate Network Route Optimization section uses Dijkstra’s algorithm on a simplified educational graph; it does not replace this comparison.</p>
         <div className="font-mono text-lg text-primary">Z = C + λE + μWT</div>
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {[["Z", "Generalized Cost ($)"], ["C", "Freight Cost ($)"], ["E", "CO₂ Emissions (kg)"], ["λ", "Shadow Carbon Price ($/kg CO₂)"], ["μ", "Urgency-Dependent Time Penalty ($/tonne/day)"], ["W", "Cargo Weight (tonnes)"], ["T", "Total Lead Time (days)"]].map(([symbol, definition]) => <div key={symbol} className="flex gap-2"><dt className="font-mono text-foreground">{symbol}</dt><dd>{definition}</dd></div>)}
